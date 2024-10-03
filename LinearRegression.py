@@ -1,52 +1,64 @@
+import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+import csv
 
 class LinearRegression: 
-    def __init__(self): 
-        self.parameters = {}
-        self.parameters['m'] = 0
-        self.parameters['p'] = 0
+    def __init__(self, train_input, train_output): 
+        self.m = 0
+        self.p = 0
+        self.min = 0
+        self.rng = 1
+        self.train_input = train_input
+        self.train_output = train_output
 
-    def approximate_value(self, value):
-        return value * self.parameters['m'] + self.parameters['p']
+    def normalize(self):
+        print(self.train_input)
+        self.min = np.min(self.train_input)
+        self.rng = np.max(self.train_input) - self.min
+        self.train_input = np.divide(self.train_input - self.min, self.rng)
+        self.train_input = self.train_input 
+        print(self.train_input)
+        
 
-    def forward_propagation(self, train_input):
-        return np.multiply(self.parameters['m'], train_input) + self.parameters['p']
+    def precision(self):
+        return np.mean((np.multiply(self.m, self.train_input) + self.p) - self.train_output)
 
-    # mean square
-    def cost(self, test_input, test_output):
-        predictions = self.forward_propagation(test_input)
-        return np.mean((test_output - predictions) ** 2)
+    # train model using descending gradient method
+    def train(self, learning_rate, iters): 
+        for epoch in range(iters):
+            predictions = np.multiply(self.train_input, self.m) + self.p
+            diff = predictions - self.train_output 
+            dm = np.mean(np.multiply(diff, self.train_input)) 
+            dp = np.mean(diff)
+            self.m -= learning_rate * dm
+            self.p -= learning_rate * dp
+            print(f"epoch = {epoch}, m = {self.m}, p = {self.p}, error = {self.precision()}")
+        return self.m, self.p, self.min, self.rng
 
-    # train model using descending graadient method
-    def train(self, train_input, train_output, learning_rate, iters): 
-        # Initialize random parameters
-        if self.parameters['m'] == 0 and self.parameters['p'] == 0:
-            size = train_input.size
-            i = np.random.randint(0, size/2)
-            j = np.random.randint(size/2, size)
-            self.parameters['m'] = (train_output[j] - train_output[i]) / (train_input[j] - train_input[i])
-            self.parameters['p'] = train_output[i] - self.parameters['m']*train_input[i] + 0.1
-            # print("{}X + {}".format(self.parameters['m'], self.parameters['p']))
-            # print("||||||||||||||||||||||||||||||||||")
-        # train model
-        for i in range(iters): 
-            predictions = self.forward_propagation(train_input) 
-            # backward propagation
-            # print(predictions)
-            # print(train_output)
-            # print("||||||||||||||||||||||||||||||||||")
-            diff = (predictions-train_output) 
-            # print(diff)
-            # print("||||||||||||||||||||||||||||||||||")
-            dm = 2 * np.mean(np.multiply(train_input, diff)) # derivate for p
-            # print(dm)
-            # print("||||||||||||||||||||||||||||||||||")
-            dp = 2 * np.mean(diff) # derivate for m
-            # print(dp)
-            # print("||||||||||||||||||||||||||||||||||")
-            self.parameters['m'] = self.parameters['m'] - learning_rate * dm 
-            self.parameters['p'] = self.parameters['p'] - learning_rate * dp
-            # print("new {}X + {}".format(self.parameters['m'], self.parameters['p']))
-            # print("||||||||||||||||||||||||||||||||||")
+def main():
+    try :
+        #get training data
+        #data = pd.read_csv("data.csv")
+        data = pd.read_csv("data_for_lr.csv")
+        data = data.dropna()
+        train_input = np.array(data[data.columns[0]])
+        train_output = np.array(data[data.columns[1]])
+        #train the model
+        model = LinearRegression(train_input, train_output)
+        model.normalize()
+        m, p, minimum, rng= model.train(0.1, 1000)
+        #save the weights and the normalisation parameters in a csv
+        with open('weights.csv', 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow([m, p, minimum, rng])
+        #visualise the result
+        train_input = np.divide(train_input - minimum, rng)
+        plt.scatter(train_input, train_output)
+        plt.plot(train_input, np.multiply(m, train_input) + p, 'r')
+        plt.show()
+    except e:
+        print("ERROR\n");
 
-        return self.parameters['m'], self.parameters['p']
+if __name__ == "__main__":
+    main()
